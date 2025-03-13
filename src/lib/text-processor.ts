@@ -22,8 +22,7 @@ export function formatMarkdown(text: string): string {
   // Set marked options for better formatting
   marked.setOptions({
     gfm: true,
-    breaks: true,
-    smartLists: true
+    breaks: true
   });
 
   // Convert markdown to HTML
