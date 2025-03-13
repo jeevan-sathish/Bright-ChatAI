@@ -8,8 +8,46 @@ import { ThemeToggle } from './ThemeToggle';
 import { generateResponse, ChatMessage } from '@/lib/gemini';
 import { formatMarkdown } from '@/lib/text-processor';
 import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
 import { useToast } from '@/hooks/use-toast';
+
+// Add TypeScript interface for SpeechRecognition
+interface SpeechRecognitionEvent extends Event {
+  results: SpeechRecognitionResultList;
+}
+
+interface SpeechRecognitionResult {
+  transcript: string;
+  isFinal: boolean;
+}
+
+interface SpeechRecognitionResultList {
+  [index: number]: SpeechRecognitionResult;
+  length: number;
+  item(index: number): SpeechRecognitionResult;
+}
+
+interface SpeechRecognitionError extends Event {
+  error: string;
+}
+
+interface SpeechRecognitionInstance extends EventTarget {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  start(): void;
+  stop(): void;
+  abort(): void;
+  onresult: (event: SpeechRecognitionEvent) => void;
+  onerror: (event: SpeechRecognitionError) => void;
+}
+
+// Add global type declaration
+declare global {
+  interface Window {
+    SpeechRecognition?: new () => SpeechRecognitionInstance;
+    webkitSpeechRecognition?: new () => SpeechRecognitionInstance;
+  }
+}
 
 const Chat = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -21,25 +59,24 @@ const Chat = () => {
   const { toast } = useToast();
   
   // Speech recognition setup
-  const recognition = useRef<SpeechRecognition | null>(null);
+  const recognition = useRef<SpeechRecognitionInstance | null>(null);
   
   // Text to speech setup
   const synth = window.speechSynthesis;
   
   useEffect(() => {
     // Initialize speech recognition
-    if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      recognition.current = new SpeechRecognition();
+    if (window.SpeechRecognition || window.webkitSpeechRecognition) {
+      const SpeechRecognitionConstructor = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognition.current = new SpeechRecognitionConstructor();
       recognition.current.continuous = true;
       recognition.current.interimResults = true;
       
       recognition.current.onresult = (event) => {
-        const transcript = Array.from(event.results)
-          .map(result => result[0])
-          .map(result => result.transcript)
-          .join('');
-        
+        let transcript = '';
+        for (let i = 0; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript;
+        }
         setInput(transcript);
       };
       

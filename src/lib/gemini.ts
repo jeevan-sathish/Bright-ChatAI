@@ -1,6 +1,7 @@
 
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
+// Using the free 'gemini-1.0-pro-latest' model endpoint
+const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.0-pro-latest:generateContent";
 
 export type ChatMessage = {
   role: "user" | "model";
@@ -10,11 +11,10 @@ export type ChatMessage = {
 
 export async function generateResponse(messages: ChatMessage[]): Promise<string> {
   try {
-    // Format messages for Gemini API
-    const formattedMessages = messages.map(msg => ({
-      role: msg.role === "user" ? "user" : "model",
-      parts: [{ text: msg.content }]
-    }));
+    // Free version uses a simpler format without conversation history
+    // We'll just use the last user message for simplicity
+    const userMessages = messages.filter(msg => msg.role === "user");
+    const lastUserMessage = userMessages[userMessages.length - 1];
 
     const response = await fetch(`${API_URL}?key=${API_KEY}`, {
       method: "POST",
@@ -22,7 +22,13 @@ export async function generateResponse(messages: ChatMessage[]): Promise<string>
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        contents: formattedMessages,
+        contents: [
+          {
+            parts: [
+              { text: lastUserMessage.content }
+            ]
+          }
+        ],
         generationConfig: {
           temperature: 0.7,
           topK: 40,

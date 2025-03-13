@@ -1,50 +1,36 @@
 
+import DOMPurify from 'dompurify';
 import { marked } from 'marked';
 import { markedHighlight } from 'marked-highlight';
 import hljs from 'highlight.js';
-import DOMPurify from 'dompurify';
 
-// Initialize marked with highlight.js for code syntax highlighting
-marked.use(
-  markedHighlight({
-    highlight: (code, language) => {
-      if (language && hljs.getLanguage(language)) {
+/**
+ * Format markdown to HTML with syntax highlighting
+ */
+export function formatMarkdown(text: string): string {
+  // Configure marked with syntax highlighting
+  marked.use(
+    markedHighlight({
+      langPrefix: 'hljs language-',
+      highlight(code, lang) {
+        const language = hljs.getLanguage(lang) ? lang : 'plaintext';
         return hljs.highlight(code, { language }).value;
       }
-      return hljs.highlightAuto(code).value;
-    }
-  })
-);
+    })
+  );
 
-// Set options for better formatting
-marked.setOptions({
-  gfm: true,
-  breaks: true,
-  headerIds: false,
-  mangle: false
-});
+  // Set marked options for better formatting
+  marked.setOptions({
+    gfm: true,
+    breaks: true,
+    smartLists: true
+  });
 
-export function formatMarkdown(text: string): string {
-  // Process the markdown
-  const html = marked.parse(text) as string;
+  // Convert markdown to HTML
+  const html = marked.parse(text);
   
-  // Sanitize the HTML to prevent XSS attacks
+  // Sanitize HTML
   const clean = DOMPurify.sanitize(html);
   
   return clean;
-}
-
-export function extractCodeBlocks(text: string): { language: string, code: string }[] {
-  const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
-  const codeBlocks: { language: string, code: string }[] = [];
-  
-  let match;
-  while ((match = codeBlockRegex.exec(text)) !== null) {
-    codeBlocks.push({
-      language: match[1] || 'plaintext',
-      code: match[2].trim()
-    });
-  }
-  
-  return codeBlocks;
 }
